@@ -177,7 +177,7 @@ class _JournalScreenState extends ConsumerState<JournalScreen> {
                     child: ListView.separated(
                       padding: const EdgeInsets.only(bottom: 20),
                       itemCount: entries.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final journal = entries[index];
 

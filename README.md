@@ -35,7 +35,6 @@ The app is powered by a **three-tier architecture**:
 | 📓 **Journaling** | Write, save, and revisit personal journal entries |
 | 📊 **Wellness Dashboard** | Visualise mood trends and wellness insights with interactive charts |
 | 🤖 **AI Wellness Guide** | Chat with an AI companion powered by Google Gemini + RAG |
-| 🧘 **Wellness Content** | Curated yoga and audio resources |
 | 🔍 **Semantic Search** | Find relevant past entries and wellness knowledge using vector embeddings |
 
 ---
