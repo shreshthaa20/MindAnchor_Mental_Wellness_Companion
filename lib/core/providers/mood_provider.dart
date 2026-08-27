@@ -13,8 +13,10 @@ class MoodNotifier extends StateNotifier<AsyncValue<List<MoodEntry>>> {
     state = const AsyncValue.loading();
     try {
       final moods = await _ref.read(moodRepositoryProvider).getMoods();
+      if (!mounted) return;
       state = AsyncValue.data(moods);
     } catch (error, stackTrace) {
+      if (!mounted) return;
       state = AsyncValue.error(error, stackTrace);
     }
   }

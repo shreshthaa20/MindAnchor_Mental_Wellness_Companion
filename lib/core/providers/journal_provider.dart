@@ -15,8 +15,10 @@ class JournalNotifier
     try {
       final journals =
           await _ref.read(journalRepositoryProvider).getJournals();
+      if (!mounted) return;
       state = AsyncValue.data(journals);
     } catch (error, stackTrace) {
+      if (!mounted) return;
       state = AsyncValue.error(error, stackTrace);
     }
   }

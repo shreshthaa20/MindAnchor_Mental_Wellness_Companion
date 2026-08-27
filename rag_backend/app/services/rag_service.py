@@ -162,7 +162,7 @@ def create_embedding(text: str) -> List[float]:
 def get_personalization_context(user_id: int) -> str:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Get latest mood
+            # Get latest mood for immediate emotional state
             cur.execute(
                 """
                 SELECT mood
@@ -176,7 +176,7 @@ def get_personalization_context(user_id: int) -> str:
             latest_mood_row = cur.fetchone()
             latest_mood = latest_mood_row[0] if latest_mood_row else ""
 
-            # Get moods (last 14 days)
+            # Get moods (last 14 days) for mood pattern
             cur.execute(
                 """
                 SELECT mood, COUNT(*) AS count
@@ -324,7 +324,7 @@ def insert_knowledge_document(
             }
 
 
-def get_knowledge_documents(user_id: int) -> List[Dict[str, Any]]:
+def get_knowledge_documents(user_id: int) -> List[Dict[str, Any]]: #It simply retrieves all knowledge available to a particular user: and prioritizes curated material:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -425,7 +425,7 @@ def generate_response(
     import google.generativeai as genai
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(
-        model_name="models/gemini-flash-latest",
+        model_name="models/gemini-3.6-flash",
         system_instruction=RAG_INSTRUCTIONS
     )
     response = model.generate_content(
@@ -472,7 +472,7 @@ RECENT_HISTORY:
     import google.generativeai as genai
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel(
-        model_name="models/gemini-flash-latest",
+        model_name="models/gemini-3.6-flash",
         system_instruction=system_instruction
     )
 

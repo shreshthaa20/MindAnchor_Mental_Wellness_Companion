@@ -1,0 +1,72 @@
+services:
+  # 1. PostgreSQL Database with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mindanchor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD must be set}"
+      POSTGRES_DB: ${DB_NAME:-mindanchor}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/database/001_core_features.sql:/docker-entrypoint-initdb.d/01_core.sql:ro
+      - ./backend/src/database/002_rag_pgvector.sql:/docker-entrypoint-initdb.d/02_rag.sql:ro
+      - ./backend/src/database/006_safety_events.sql:/docker-entrypoint-initdb.d/03_safety.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-mindanchor}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Python FastAPI RAG Service
+  rag_backend:
+    build:
+      context: ./rag_backend
+      dockerfile: Dockerfile
+    container_name: mindanchor-rag-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD must be set}"
+      DB_NAME: ${DB_NAME:-mindanchor}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      EMBEDDING_DIMENSIONS: 768
+    volumes:
+      - ./rag_backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 3. Node.js Express API Gateway / Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mindanchor-node-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD must be set}"
+      DB_NAME: ${DB_NAME:-mindanchor}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_mindanchor_prod}
+      RAG_SERVICE_URL: http://rag_backend:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rag_backend:
+        condition: service_started
+
+volumes:
+  postgres_data:

@@ -105,6 +105,8 @@ def generate_wellness_guide_recommendation(req: WellnessGuideRequest):
         res = rag_service.generate_wellness_guide(req.user_id, req.question)
         return {"success": True, **res}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate wellness guide: {str(e)}"

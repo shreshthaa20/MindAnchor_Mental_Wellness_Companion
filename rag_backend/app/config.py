@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -10,6 +11,7 @@ class Settings(BaseSettings):
     DB_NAME: str = "neondb"
     GEMINI_API_KEY: str = ""
     EMBEDDING_DIMENSIONS: int = 768
+    DB_SSLMODE: Optional[str] = None
     
     # Allow loading from a custom .env file location or environment variables
     model_config = SettingsConfigDict(
