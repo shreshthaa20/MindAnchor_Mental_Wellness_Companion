@@ -114,7 +114,7 @@ mindmate/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/mindmate.git
+git clone https://github.com/shreshthaa20/mindmate.git
 cd mindmate/MindAnchor
 ```
 
