@@ -1,0 +1,55 @@
+services:
+  # 1. Python FastAPI RAG Service (Docker)
+  - type: web
+    name: mindanchor-rag-backend
+    runtime: docker
+    dockerfilePath: rag_backend/Dockerfile
+    dockerContext: rag_backend
+    plan: free
+    region: oregon
+    envVars:
+      - key: DB_HOST
+        value: ep-falling-lab-ay2wznkb-pooler.c-5.us-east-2.aws.neon.tech
+      - key: DB_PORT
+        value: 5432
+      - key: DB_USER
+        value: neondb_owner
+      - key: DB_PASSWORD
+        value: npg_8EVfeHrT1sLW
+      - key: DB_NAME
+        value: neondb
+      - key: DB_SSLMODE
+        value: require
+      - key: EMBEDDING_DIMENSIONS
+        value: 768
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # 2. Node.js Express Backend Service (Docker)
+  - type: web
+    name: mindanchor-node-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: DB_HOST
+        value: ep-falling-lab-ay2wznkb-pooler.c-5.us-east-2.aws.neon.tech
+      - key: DB_PORT
+        value: 5432
+      - key: DB_USER
+        value: neondb_owner
+      - key: DB_PASSWORD
+        value: npg_8EVfeHrT1sLW
+      - key: DB_NAME
+        value: neondb
+      - key: JWT_SECRET
+        value: mindanchor_jwt_secret_production_2026
+      - key: RAG_SERVICE_URL
+        fromService:
+          type: web
+          name: mindanchor-rag-backend
+          property: host
