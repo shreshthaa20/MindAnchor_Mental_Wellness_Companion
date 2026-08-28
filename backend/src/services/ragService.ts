@@ -20,9 +20,18 @@ export interface SemanticSearchResult extends KnowledgeDocument {
 }
 
 const getRAGServiceUrl = (): string => {
-  const url = process.env.RAG_SERVICE_URL;
+  let url = process.env.RAG_SERVICE_URL;
   if (!url) {
     throw new AppError("RAG service URL is not configured.", 500);
+  }
+  url = url.trim().replace(/\/+$/, "");
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    // If it's a Render internal service name or public domain without protocol
+    if (url.includes(".onrender.com")) {
+      url = `https://${url}`;
+    } else {
+      url = `http://${url}`;
+    }
   }
   return url;
 };

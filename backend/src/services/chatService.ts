@@ -128,7 +128,12 @@ export const createChatResponseForUser = async (
     let assistantText = "";
 
     try {
-      const url = `${process.env.RAG_SERVICE_URL || "http://localhost:8000"}/chat`;
+      let baseUrl = process.env.RAG_SERVICE_URL || "http://localhost:8000";
+      baseUrl = baseUrl.trim().replace(/\/+$/, "");
+      if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+        baseUrl = baseUrl.includes(".onrender.com") ? `https://${baseUrl}` : `http://${baseUrl}`;
+      }
+      const url = `${baseUrl}/chat`;
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
