@@ -6,6 +6,8 @@ const controllerError_1 = require("../utils/controllerError");
 // Create Mood
 const createMood = async (req, res) => {
     try {
+        // The controller reads data from the HTTP request and passes it to the service.
+        // req.user?.id comes from the JWT middleware; req.body.mood comes from the app.
         const mood = await (0, moodService_1.createMoodForUser)(req.user?.id, req.body.mood);
         return res.status(201).json({
             success: true,
@@ -20,6 +22,7 @@ exports.createMood = createMood;
 // Get All Moods
 const getMoods = async (req, res) => {
     try {
+        // The service only returns moods that belong to the logged-in user.
         const moods = await (0, moodService_1.getMoodsForUser)(req.user?.id);
         return res.json({
             success: true,
@@ -33,6 +36,7 @@ const getMoods = async (req, res) => {
 exports.getMoods = getMoods;
 const updateMood = async (req, res) => {
     try {
+        // req.params.id comes from the URL, for example PUT /api/moods/12.
         const mood = await (0, moodService_1.updateMoodForUser)(req.user?.id, Number(req.params.id), req.body.mood);
         return res.status(200).json({
             success: true,
@@ -46,6 +50,7 @@ const updateMood = async (req, res) => {
 exports.updateMood = updateMood;
 const deleteMood = async (req, res) => {
     try {
+        // Deleting also checks user_id, so a user cannot delete another user's mood.
         await (0, moodService_1.deleteMoodForUser)(req.user?.id, Number(req.params.id));
         return res.status(204).send();
     }

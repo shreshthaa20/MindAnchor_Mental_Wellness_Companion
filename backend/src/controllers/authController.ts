@@ -14,8 +14,12 @@ export const registerUser = async (
   try {
     const { name, email, password } = req.body;
 
+    // Never store plain-text passwords.
+    // bcrypt turns the password into a one-way hash before saving it.
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // $1, $2, $3 are parameter placeholders.
+    // They protect against SQL injection because values are passed separately.
     const result = await pool.query(
       `
       INSERT INTO users (name, email, password)
@@ -58,6 +62,7 @@ export const loginUser = async (
   try {
     const { email, password } = req.body;
 
+    // First find the user by email.
     const result = await pool.query(
       "SELECT * FROM users WHERE email = $1",
       [email]
@@ -72,6 +77,7 @@ export const loginUser = async (
 
     const user = result.rows[0];
 
+    // Compare the plain password from login with the hashed password in the database.
     const isMatch = await bcrypt.compare(
       password,
       user.password
@@ -84,6 +90,8 @@ export const loginUser = async (
       });
     }
 
+    // A JWT is a signed login token.
+    // The frontend stores it and sends it with future protected requests.
     const token = jwt.sign(
       {
         id: user.id,
@@ -122,6 +130,7 @@ export const getCurrentUser = async (
   try {
     const userId = req.user?.id;
 
+    // req.user was added by authenticateToken after it verified the JWT.
     const result = await pool.query(
       `
       SELECT id, name, email

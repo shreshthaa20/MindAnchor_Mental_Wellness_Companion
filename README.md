@@ -19,6 +19,9 @@
 
 **MindAnchor** is a cross-platform mental wellness app built with Flutter. It helps users build healthy emotional habits through mood tracking, reflective journaling, a personalized wellness dashboard, and an AI-powered companion chat backed by Retrieval-Augmented Generation (RAG).
 
+### 🐳 Built with Docker
+The entire backend infrastructure is **fully containerized**. We use Docker to package the Node.js API, the Python FastAPI service, and the PostgreSQL database into isolated "containers". This ensures that the app runs identically on any developer's machine without complex local setup, and makes it instantly ready for deployment to any modern cloud platform.
+
 The app is powered by a **three-tier architecture**:
 - 🎨 **Flutter Frontend** — cross-platform UI (Android, iOS, Web, Desktop)
 - ⚙️ **Node.js + Express Backend** — REST API, JWT auth, database operations

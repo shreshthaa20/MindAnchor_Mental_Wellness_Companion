@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Install dependencies with timeout protection
 COPY requirements.txt .
-RUN pip install --default-timeout=120 -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=120 -r requirements.txt
 
 # Copy application source code and data
 COPY . .

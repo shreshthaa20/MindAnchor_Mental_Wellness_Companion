@@ -20,6 +20,7 @@ export interface SemanticSearchResult extends KnowledgeDocument {
 }
 
 const getRAGServiceUrl = (): string => {
+  // The Python AI service URL must be configured because this file acts as a bridge to it.
   let url = process.env.RAG_SERVICE_URL;
   if (!url) {
     throw new AppError("RAG service URL is not configured.", 500);
@@ -48,6 +49,7 @@ export const createKnowledgeDocumentForUser = async (
     throw new AppError("Unauthorized.", 401);
   }
 
+  // Forward the request to the Python service, which creates embeddings and saves the document.
   const url = `${getRAGServiceUrl()}/knowledge`;
   try {
     const response = await fetch(url, {
@@ -108,6 +110,7 @@ export const semanticSearchForUser = async (
     throw new AppError("Unauthorized.", 401);
   }
 
+  // Semantic search means "find text with similar meaning", not just matching words.
   const url = `${getRAGServiceUrl()}/search?user_id=${userId}&query=${encodeURIComponent(String(query || ""))}&limit=${limit || 5}`;
   try {
     const response = await fetch(url);
@@ -136,6 +139,7 @@ export const answerWithRetrievalForUser = async (
     throw new AppError("Unauthorized.", 401);
   }
 
+  // /answer asks the Python service to search relevant knowledge and generate an answer.
   const url = `${getRAGServiceUrl()}/answer`;
   try {
     const response = await fetch(url, {

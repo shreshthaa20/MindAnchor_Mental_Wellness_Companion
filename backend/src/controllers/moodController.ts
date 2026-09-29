@@ -14,6 +14,8 @@ export const createMood = async (
   res: Response
 ) => {
   try {
+    // The controller reads data from the HTTP request and passes it to the service.
+    // req.user?.id comes from the JWT middleware; req.body.mood comes from the app.
     const mood = await createMoodForUser(req.user?.id, req.body.mood);
 
     return res.status(201).json({
@@ -31,6 +33,7 @@ export const getMoods = async (
   res: Response
 ) => {
   try {
+    // The service only returns moods that belong to the logged-in user.
     const moods = await getMoodsForUser(req.user?.id);
 
     return res.json({
@@ -47,6 +50,7 @@ export const updateMood = async (
   res: Response
 ) => {
   try {
+    // req.params.id comes from the URL, for example PUT /api/moods/12.
     const mood = await updateMoodForUser(
       req.user?.id,
       Number(req.params.id),
@@ -67,6 +71,7 @@ export const deleteMood = async (
   res: Response
 ) => {
   try {
+    // Deleting also checks user_id, so a user cannot delete another user's mood.
     await deleteMoodForUser(req.user?.id, Number(req.params.id));
 
     return res.status(204).send();

@@ -5,9 +5,20 @@ const database_1 = require("../config/database");
 const AppError_1 = require("../utils/AppError");
 const safetyService_1 = require("./safetyService");
 const getRAGServiceUrl = () => {
-    const url = process.env.RAG_SERVICE_URL;
+    // The Python AI service URL must be configured because this file acts as a bridge to it.
+    let url = process.env.RAG_SERVICE_URL;
     if (!url) {
         throw new AppError_1.AppError("RAG service URL is not configured.", 500);
+    }
+    url = url.trim().replace(/\/+$/, "");
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        // If it's a Render internal service name or public domain without protocol
+        if (url.includes(".onrender.com")) {
+            url = `https://${url}`;
+        }
+        else {
+            url = `http://${url}`;
+        }
     }
     return url;
 };
@@ -15,6 +26,7 @@ const createKnowledgeDocumentForUser = async (userId, title, content, source, ca
     if (!userId) {
         throw new AppError_1.AppError("Unauthorized.", 401);
     }
+    // Forward the request to the Python service, which creates embeddings and saves the document.
     const url = `${getRAGServiceUrl()}/knowledge`;
     try {
         const response = await fetch(url, {
@@ -68,6 +80,7 @@ const semanticSearchForUser = async (userId, query, limit) => {
     if (!userId) {
         throw new AppError_1.AppError("Unauthorized.", 401);
     }
+    // Semantic search means "find text with similar meaning", not just matching words.
     const url = `${getRAGServiceUrl()}/search?user_id=${userId}&query=${encodeURIComponent(String(query || ""))}&limit=${limit || 5}`;
     try {
         const response = await fetch(url);
@@ -89,6 +102,7 @@ const answerWithRetrievalForUser = async (userId, question) => {
     if (!userId) {
         throw new AppError_1.AppError("Unauthorized.", 401);
     }
+    // /answer asks the Python service to search relevant knowledge and generate an answer.
     const url = `${getRAGServiceUrl()}/answer`;
     try {
         const response = await fetch(url, {
@@ -131,7 +145,8 @@ const createWellnessGuideRecommendationForUser = async (userId, question) => {
     if (!userId) {
         throw new AppError_1.AppError("Unauthorized.", 401);
     }
-    const url = `${getRAGServiceUrl()}/wellness-guide`;
+    const targetBase = getRAGServiceUrl();
+    const url = `${targetBase}/wellness-guide`;
     let resultData;
     try {
         const response = await fetch(url, {
@@ -149,9 +164,10 @@ const createWellnessGuideRecommendationForUser = async (userId, question) => {
         resultData = await response.json();
     }
     catch (error) {
+        console.error(`[RAG Service Connection Error] Failed to call ${url}:`, error);
         if (error instanceof AppError_1.AppError)
             throw error;
-        throw new AppError_1.AppError(`RAG service error: ${error.message}`, 502);
+        throw new AppError_1.AppError(`RAG service error (${url}): ${error.message}`, 502);
     }
     const client = await database_1.pool.connect();
     try {

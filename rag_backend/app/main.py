@@ -10,6 +10,8 @@ app = FastAPI(
 )
 
 # Request / Response Schemas
+# These Pydantic classes describe what each endpoint expects in req.body.
+# FastAPI automatically validates incoming JSON against these classes.
 class KnowledgeCreateRequest(BaseModel):
     user_id: Optional[int] = None
     title: str = Field(..., max_length=160)
@@ -36,6 +38,7 @@ class EmbedRequest(BaseModel):
 
 @app.get("/health")
 def health_check():
+    # Simple endpoint used to check whether the Python service is running.
     return {"status": "ok", "service": "mindanchor-rag"}
 
 
@@ -43,6 +46,7 @@ def health_check():
 @app.post("/knowledge", status_code=status.HTTP_201_CREATED)
 def create_knowledge(req: KnowledgeCreateRequest):
     try:
+        # Save a knowledge document and create its embedding for future search.
         doc = rag_service.insert_knowledge_document(
             user_id=req.user_id,
             title=req.title,
@@ -78,6 +82,7 @@ def search(
     limit: int = Query(5, ge=1, le=10)
 ):
     try:
+        # Search the knowledge base by meaning using vector embeddings.
         results = rag_service.semantic_search(user_id, query, limit)
         return {"success": True, "results": results}
     except Exception as e:
@@ -90,6 +95,7 @@ def search(
 @app.post("/answer")
 def answer_question(req: AnswerRequest):
     try:
+        # Generate an answer using both Gemini and retrieved knowledge-base content.
         res = rag_service.answer_with_retrieval(req.user_id, req.question)
         return {"success": True, **res}
     except Exception as e:
@@ -126,6 +132,7 @@ def embed_text(req: EmbedRequest):
 @app.post("/chat")
 def chat_completion(req: ChatRequest):
     try:
+        # Generate a chat reply using Gemini plus user personalization context.
         res = rag_service.chat_completion(req.user_id, req.messages)
         return {"success": True, "answer": res}
     except Exception as e:

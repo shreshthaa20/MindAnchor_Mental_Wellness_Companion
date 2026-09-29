@@ -4,14 +4,10 @@ from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Override DB settings for Neon
 from app.config import settings
-settings.DB_HOST = "ep-falling-lab-ay2wznkb-pooler.c-5.us-east-2.aws.neon.tech"
-settings.DB_PORT = 5432
-settings.DB_USER = "neondb_owner"
-settings.DB_PASSWORD = "npg_8EVfeHrT1sLW"
-settings.DB_NAME = "neondb"
-settings.DB_SSLMODE = "require"
+
+if not settings.DB_PASSWORD:
+    raise RuntimeError("DB_PASSWORD must be set in rag_backend/.env or the environment.")
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter

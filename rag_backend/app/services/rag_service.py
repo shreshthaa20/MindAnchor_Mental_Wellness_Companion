@@ -147,6 +147,8 @@ def cosine_similarity(v1: List[float], v2: List[float]) -> float:
 
 
 def create_embedding(text: str) -> List[float]:
+    # An embedding is a list of numbers that represents the meaning of text.
+    # Similar texts should have similar number lists.
     if not settings.GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY is not configured.")
     import google.generativeai as genai
@@ -160,6 +162,7 @@ def create_embedding(text: str) -> List[float]:
 
 
 def get_personalization_context(user_id: int) -> str:
+    # Collect recent user data so the AI response can feel personalized.
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             # Get latest mood for immediate emotional state
@@ -237,6 +240,7 @@ def get_latest_mood_label(user_id: int) -> str:
 
 
 def semantic_search(user_id: int, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    # Convert the search query into an embedding, then compare it with saved embeddings.
     query_embedding = create_embedding(query)
     query_embedding_str = json.dumps(query_embedding)
 
@@ -291,6 +295,7 @@ def insert_knowledge_document(
     if tags is None:
         tags = []
 
+    # Store an embedding with the document so future searches can find it by meaning.
     text_to_embed = f"{title}\n\n{content}"
     embedding = create_embedding(text_to_embed)
     embedding_str = json.dumps(embedding)
@@ -387,6 +392,7 @@ def generate_response(
                    assessment history into the retrieval query itself.
                    Retrieves 7 sources.
     """
+    # Safety is checked before retrieval or AI generation.
     safety = assess_safety_risk(question)
     if safety["hasCrisisRisk"]:
         return {
@@ -406,6 +412,7 @@ def generate_response(
         retrieval_query = f"{question}\n\nMood label: {latest_mood}\n\n{personalization}"
         limit = 5
 
+    # Find the most relevant knowledge-base documents for this question.
     sources = semantic_search(user_id, retrieval_query, limit=limit)
     if not sources:
         return {
@@ -415,6 +422,7 @@ def generate_response(
             "safety": safety
         }
 
+    # The retrieved context is sent to Gemini so it can answer using app knowledge.
     context = "\n\n".join(
         f"Source {i+1} ({doc.get('category', '')}): {doc['title']}\n{doc['content']}"
         for i, doc in enumerate(sources)
@@ -456,6 +464,8 @@ def generate_wellness_guide(user_id: int, question: str) -> Dict[str, Any]:
 
 
 def chat_completion(user_id: int, messages: List[Dict[str, str]]) -> str:
+    # Chat completion is used by Node's /api/chat endpoint.
+    # It includes recent mood/journal context before asking Gemini to reply.
     latest_mood = get_latest_mood_label(user_id)
     personalization = get_personalization_context(user_id)
     system_instruction = f"""

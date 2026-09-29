@@ -10,6 +10,8 @@ export interface Mood {
 }
 
 const normalizeMood = (mood: unknown): string => {
+  // "unknown" means the value came from the outside world.
+  // We validate it before trusting it.
   if (typeof mood !== "string" || mood.trim().length === 0) {
     throw new AppError("Mood is required.", 400);
   }
@@ -29,8 +31,10 @@ export const createMoodForUser = async (
     throw new AppError("Unauthorized.", 401);
   }
 
+  // Clean and validate the mood before saving it.
   const normalizedMood = normalizeMood(mood);
 
+  // INSERT creates a new row. RETURNING * gives us the row that was just created.
   const result = await pool.query<Mood>(
     `
     INSERT INTO moods (user_id, mood)
@@ -50,6 +54,7 @@ export const getMoodsForUser = async (
     throw new AppError("Unauthorized.", 401);
   }
 
+  // Always filter by user_id so users only see their own data.
   const result = await pool.query<Mood>(
     `
     SELECT *
@@ -72,12 +77,15 @@ export const updateMoodForUser = async (
     throw new AppError("Unauthorized.", 401);
   }
 
+  // URL params arrive as strings, so controllers convert id to a number.
+  // This check makes sure it is a valid positive integer.
   if (!Number.isInteger(moodId) || moodId <= 0) {
     throw new AppError("Invalid mood id.", 400);
   }
 
   const normalizedMood = normalizeMood(mood);
 
+  // WHERE id = $2 AND user_id = $3 prevents editing another user's mood.
   const result = await pool.query<Mood>(
     `
     UPDATE moods
@@ -90,6 +98,7 @@ export const updateMoodForUser = async (
   );
 
   if (result.rows.length === 0) {
+    // If no row came back, either the mood does not exist or it belongs to another user.
     throw new AppError("Mood not found.", 404);
   }
 
@@ -108,6 +117,7 @@ export const deleteMoodForUser = async (
     throw new AppError("Invalid mood id.", 400);
   }
 
+  // DELETE removes the row. rowCount tells us how many rows were deleted.
   const result = await pool.query(
     `
     DELETE FROM moods

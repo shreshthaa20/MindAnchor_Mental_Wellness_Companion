@@ -7,6 +7,8 @@ const express_1 = __importDefault(require("express"));
 const moodController_1 = require("../controllers/moodController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = express_1.default.Router();
+// All mood routes are protected with authenticateToken.
+// That means only a logged-in user can create, read, update, or delete moods.
 router.post("/", authMiddleware_1.authenticateToken, moodController_1.createMood);
 router.get("/", authMiddleware_1.authenticateToken, moodController_1.getMoods);
 router.put("/:id", authMiddleware_1.authenticateToken, moodController_1.updateMood);

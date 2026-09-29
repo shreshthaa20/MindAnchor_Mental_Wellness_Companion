@@ -13,7 +13,11 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const registerUser = async (req, res) => {
     try {
         const { name, email, password } = req.body;
+        // Never store plain-text passwords.
+        // bcrypt turns the password into a one-way hash before saving it.
         const hashedPassword = await bcrypt_1.default.hash(password, 10);
+        // $1, $2, $3 are parameter placeholders.
+        // They protect against SQL injection because values are passed separately.
         const result = await database_1.pool.query(`
       INSERT INTO users (name, email, password)
       VALUES ($1, $2, $3)
@@ -47,6 +51,7 @@ exports.registerUser = registerUser;
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
+        // First find the user by email.
         const result = await database_1.pool.query("SELECT * FROM users WHERE email = $1", [email]);
         if (result.rows.length === 0) {
             return res.status(401).json({
@@ -55,6 +60,7 @@ const loginUser = async (req, res) => {
             });
         }
         const user = result.rows[0];
+        // Compare the plain password from login with the hashed password in the database.
         const isMatch = await bcrypt_1.default.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({
@@ -62,6 +68,8 @@ const loginUser = async (req, res) => {
                 message: "Invalid email or password",
             });
         }
+        // A JWT is a signed login token.
+        // The frontend stores it and sends it with future protected requests.
         const token = jsonwebtoken_1.default.sign({
             id: user.id,
             email: user.email,
@@ -91,6 +99,7 @@ exports.loginUser = loginUser;
 const getCurrentUser = async (req, res) => {
     try {
         const userId = req.user?.id;
+        // req.user was added by authenticateToken after it verified the JWT.
         const result = await database_1.pool.query(`
       SELECT id, name, email
       FROM users

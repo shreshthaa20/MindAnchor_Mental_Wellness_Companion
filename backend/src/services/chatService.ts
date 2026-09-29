@@ -15,10 +15,13 @@ export interface ChatMessage {
 export type ChatType = "wellness_guide";
 
 const normalizeChatType = (chatType: unknown): ChatType => {
+  // The app currently supports only one chat mode.
+  // Returning a fixed value prevents unsupported chat types from entering the DB.
   return "wellness_guide";
 };
 
 const normalizeMessage = (message: unknown): string => {
+  // Messages come from the frontend, so validate before using them.
   if (typeof message !== "string" || message.trim().length === 0) {
     throw new AppError("Message is required.", 400);
   }
@@ -67,11 +70,15 @@ export const createChatResponseForUser = async (
 
   const normalizedMessage = normalizeMessage(message);
   const normalizedChatType = normalizeChatType(chatType);
+
+  // A transaction lets us save the user message and assistant response together.
+  // If something fails, ROLLBACK undoes the partial work.
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
+    // Save what the user typed before generating the AI reply.
     const userMessageResult = await client.query<ChatMessage>(
       `
       INSERT INTO chat_messages (user_id, role, chat_type, content)
@@ -81,6 +88,8 @@ export const createChatResponseForUser = async (
       [userId, normalizedChatType, normalizedMessage]
     );
 
+    // Safety checks run before calling the AI service.
+    // If the message looks urgent, the app returns a crisis-support response.
     const safetyAssessment = assessSafetyRisk(normalizedMessage);
 
     if (safetyAssessment.hasCrisisRisk && safetyAssessment.response) {
@@ -109,6 +118,7 @@ export const createChatResponseForUser = async (
       };
     }
 
+    // Fetch recent conversation history so the AI has context.
     const historyResult = await client.query<ChatMessage>(
       `
       SELECT *
@@ -128,6 +138,8 @@ export const createChatResponseForUser = async (
     let assistantText = "";
 
     try {
+      // The Node backend calls the Python RAG service for AI generation.
+      // RAG_SERVICE_URL is usually http://localhost:8000 in development.
       let baseUrl = process.env.RAG_SERVICE_URL || "http://localhost:8000";
       baseUrl = baseUrl.trim().replace(/\/+$/, "");
       if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
@@ -152,6 +164,7 @@ export const createChatResponseForUser = async (
       const data = await response.json();
       assistantText = data.answer;
     } catch (error) {
+      // If the AI service is down, return a safe fallback instead of failing the chat.
       console.error("DEBUG Node.js COMPANION ERROR:", error);
       const fallbackText =
         "I'm here with you. I can't reach the AI service right now, but you can still take one small grounding step: pause, take a slow breath, and name one thing you need in this moment. If this is urgent or you may not be safe, please contact local emergency services or a trusted person immediately.";
@@ -185,6 +198,7 @@ export const createChatResponseForUser = async (
       throw new AppError("AI response was empty.", 502);
     }
 
+    // Save the assistant's AI-generated reply.
     const assistantMessageResult = await client.query<ChatMessage>(
       `
       INSERT INTO chat_messages (user_id, role, chat_type, content)
