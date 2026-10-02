@@ -31,7 +31,7 @@ exports.chatMessages = (0, pg_core_1.pgTable)("chat_messages", {
     userId: (0, pg_core_1.integer)("user_id").references(() => exports.users.id, { onDelete: "cascade" }).notNull(),
     role: (0, pg_core_1.varchar)("role", { length: 20 }).notNull(),
     content: (0, pg_core_1.text)("content").notNull(),
-    chatType: (0, pg_core_1.varchar)("chat_type", { length: 20 }).default("companion").notNull(),
+    chatType: (0, pg_core_1.varchar)("chat_type", { length: 20 }).default("wellness_guide").notNull(),
     recommendations: (0, pg_core_1.jsonb)("recommendations"),
     createdAt: (0, pg_core_1.timestamp)("created_at", { withTimezone: true }).defaultNow().notNull(), // with timezone
 });

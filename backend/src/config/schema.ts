@@ -32,7 +32,7 @@ export const chatMessages = pgTable("chat_messages", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   role: varchar("role", { length: 20 }).notNull(),
   content: text("content").notNull(),
-  chatType: varchar("chat_type", { length: 20 }).default("companion").notNull(),
+  chatType: varchar("chat_type", { length: 20 }).default("wellness_guide").notNull(),
   recommendations: jsonb("recommendations"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(), // with timezone
 });

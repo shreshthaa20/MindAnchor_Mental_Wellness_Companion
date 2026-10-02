@@ -13,7 +13,6 @@ const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const ragRoutes_1 = __importDefault(require("./routes/ragRoutes"));
 const authMiddleware_1 = require("./middleware/authMiddleware");
-const database_1 = require("./config/database");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Create a small log for every incoming request.
@@ -43,26 +42,8 @@ app.get("/api/profile", authMiddleware_1.authenticateToken, (req, res) => {
     });
 });
 const PORT = process.env.PORT || 5000;
-// app.listen starts the HTTP server.
-// The async callback also runs a small database setup/migration when the server starts.
-app.listen(PORT, async () => {
+// app.listen starts the HTTP server. Database migrations are run separately,
+// so starting the API never changes existing chat records.
+app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    // Run database migration to fix constraints
-    try {
-        const client = await database_1.pool.connect();
-        console.log("Database connection successful. Migrating chat constraints...");
-        await client.query("BEGIN");
-        // pgvector is needed for storing/searching AI embeddings in PostgreSQL.
-        await client.query("CREATE EXTENSION IF NOT EXISTS vector");
-        await client.query("ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_chat_type_check");
-        // Ensure all existing messages are set to wellness_guide
-        await client.query("UPDATE chat_messages SET chat_type = 'wellness_guide' WHERE chat_type IS NULL OR chat_type != 'wellness_guide'");
-        await client.query("ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_chat_type_check CHECK (chat_type = 'wellness_guide')");
-        await client.query("COMMIT");
-        console.log("Migration successful: Allowed chat types restricted to wellness_guide & vector extension verified.");
-        client.release();
-    }
-    catch (err) {
-        console.error("Database migration error:", err);
-    }
 });
