@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD must be set}"
       POSTGRES_DB: ${DB_NAME:-mindanchor}
     ports:
       - "${DB_PORT:-5432}:5432"
@@ -34,7 +34,7 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD must be set}"
       DB_NAME: ${DB_NAME:-mindanchor}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       EMBEDDING_DIMENSIONS: 768
@@ -58,7 +58,7 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD must be set}"
       DB_NAME: ${DB_NAME:-mindanchor}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       RAG_SERVICE_URL: http://rag_backend:8000
