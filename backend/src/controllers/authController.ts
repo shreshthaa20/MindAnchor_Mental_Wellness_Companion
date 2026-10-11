@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { pool } from "../config/database";
+import { JWT_SECRET, pool } from "../config/database";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthRequest } from "../middleware/authMiddleware";
@@ -97,7 +97,7 @@ export const loginUser = async (
         id: user.id,
         email: user.email,
       },
-      process.env.JWT_SECRET as string,
+      JWT_SECRET,
       {
         expiresIn: "7d",
       }

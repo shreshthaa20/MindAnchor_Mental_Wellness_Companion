@@ -6,7 +6,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 100 }).notNull(),
   email: varchar("email", { length: 255 }).unique().notNull(), // length 255
   password: varchar("password", { length: 255 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(), // without timezone
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const moods = pgTable("moods", {
@@ -14,8 +14,8 @@ export const moods = pgTable("moods", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   mood: varchar("mood", { length: 50 }).notNull(), // length 50
   note: text("note"),
-  createdAt: timestamp("created_at").defaultNow().notNull(), // without timezone
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(), // with timezone
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const journals = pgTable("journals", {
@@ -23,8 +23,8 @@ export const journals = pgTable("journals", {
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   title: varchar("title", { length: 120 }).notNull(),
   content: text("content").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(), // with timezone
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(), // with timezone
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const chatMessages = pgTable("chat_messages", {
@@ -34,7 +34,7 @@ export const chatMessages = pgTable("chat_messages", {
   content: text("content").notNull(),
   chatType: varchar("chat_type", { length: 20 }).default("wellness_guide").notNull(),
   recommendations: jsonb("recommendations"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(), // with timezone
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const safetyEvents = pgTable("safety_events", {
@@ -44,7 +44,7 @@ export const safetyEvents = pgTable("safety_events", {
   riskLevel: varchar("risk_level", { length: 20 }).notNull(),
   source: varchar("source", { length: 40 }).notNull(), // length 40
   messagePreview: text("message_preview").notNull(), // text type
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(), // with timezone
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const knowledgeBase = pgTable("knowledge_base", {

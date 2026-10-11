@@ -51,6 +51,11 @@ app.*.map.json
 # Backend dependencies & builds
 node_modules/
 dist/
+!backend/dist/
+!backend/dist/middleware/
+!backend/dist/middleware/validateRequest.js
+!backend/dist/validation/
+!backend/dist/validation/schemas.js
 
 # Python virtual environment & cache
 venv/

@@ -9,8 +9,8 @@ const normalizeMood = (mood) => {
     if (typeof mood !== "string" || mood.trim().length === 0) {
         throw new AppError_1.AppError("Mood is required.", 400);
     }
-    if (mood.trim().length > 80) {
-        throw new AppError_1.AppError("Mood must be 80 characters or fewer.", 400);
+    if (mood.trim().length > 50) {
+        throw new AppError_1.AppError("Mood must be 50 characters or fewer.", 400);
     }
     return mood.trim();
 };

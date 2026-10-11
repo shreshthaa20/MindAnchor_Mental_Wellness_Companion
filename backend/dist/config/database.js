@@ -3,10 +3,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pool = void 0;
+exports.pool = exports.JWT_SECRET = exports.getRequiredEnv = void 0;
 const pg_1 = require("pg");
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
+const getRequiredEnv = (name) => {
+    const value = process.env[name];
+    if (!value) {
+        throw new Error(`${name} is not set`);
+    }
+    return value;
+};
+exports.getRequiredEnv = getRequiredEnv;
+exports.JWT_SECRET = (0, exports.getRequiredEnv)("JWT_SECRET");
 exports.pool = new pg_1.Pool({
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),

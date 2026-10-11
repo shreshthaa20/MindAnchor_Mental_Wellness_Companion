@@ -3,6 +3,18 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+export const getRequiredEnv = (name: string): string => {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`${name} is not set`);
+  }
+
+  return value;
+};
+
+export const JWT_SECRET = getRequiredEnv("JWT_SECRET");
+
 export const pool = new Pool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),

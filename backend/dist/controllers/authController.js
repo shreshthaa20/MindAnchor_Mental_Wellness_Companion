@@ -73,7 +73,7 @@ const loginUser = async (req, res) => {
         const token = jsonwebtoken_1.default.sign({
             id: user.id,
             email: user.email,
-        }, process.env.JWT_SECRET, {
+        }, database_1.JWT_SECRET, {
             expiresIn: "7d",
         });
         return res.status(200).json({
