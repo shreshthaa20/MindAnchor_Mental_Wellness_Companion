@@ -9,11 +9,16 @@ from ..database import get_db_connection
 
 # Imminent risk — specific statements of immediate intent (checked first, highest priority)
 IMMINENT_RISK_PATTERNS = [
-    re.compile(r"\bi am going to kill myself\b", re.IGNORECASE),
-    re.compile(r"\bi'm going to kill myself\b", re.IGNORECASE),
+    re.compile(r"\bi(?: am|'m) going to kill myself\b", re.IGNORECASE),
     re.compile(r"\bi will kill myself\b", re.IGNORECASE),
-    re.compile(r"\bi have a plan\b", re.IGNORECASE),
-    re.compile(r"\btonight is the night\b", re.IGNORECASE),
+    re.compile(
+        r"\bi have a plan\b(?=[^.!?\n]{0,100}\b(?:to (?:kill myself|end my life|hurt myself)|for (?:suicide|self[-\s]?harm))\b)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\btonight is the night\b(?=[^.!?\n]{0,100}\b(?:to (?:kill myself|end my life|hurt myself)|i (?:will|am going to|'m going to) (?:kill myself|end my life|hurt myself)|suicide|self[-\s]?harm)\b)",
+        re.IGNORECASE,
+    ),
     re.compile(r"\bgoodbye forever\b", re.IGNORECASE),
 ]
 
@@ -22,9 +27,12 @@ POSSIBLE_RISK_PATTERNS = [
     re.compile(r"\bsuicid(e|al)\b", re.IGNORECASE),
     re.compile(r"\bself[-\s]?harm\b", re.IGNORECASE),
     re.compile(r"\bhurt myself\b", re.IGNORECASE),
-    re.compile(r"\bkill myself\b", re.IGNORECASE),
+    re.compile(r"\bkill(?:ing)? myself\b", re.IGNORECASE),
+    re.compile(r"\bi want to die\b", re.IGNORECASE),
     re.compile(r"\bend my life\b", re.IGNORECASE),
     re.compile(r"\bi do not want to live\b", re.IGNORECASE),
+    re.compile(r"\bi don'?t want to (?:live|be alive)\b", re.IGNORECASE),
+    re.compile(r"\bi wish i (?:was|were) dead\b", re.IGNORECASE),
     re.compile(r"\bcan't go on\b", re.IGNORECASE),
     re.compile(r"\bno reason to live\b", re.IGNORECASE),
     re.compile(r"\bhopeless\b", re.IGNORECASE),
@@ -32,6 +40,9 @@ POSSIBLE_RISK_PATTERNS = [
     re.compile(r"\bhurt someone\b", re.IGNORECASE),
 ]
 
+
+def normalize_safety_text(message: str) -> str:
+    return re.sub(r"[\u2018\u2019\u02bc\uff07]", "'", message)
 
 
 SAFETY_INSTRUCTIONS = """
@@ -80,9 +91,11 @@ Return a short, natural paragraph only. No headers, no bullet lists, no markdown
 """.strip()
 
 def assess_safety_risk(message: str) -> Dict[str, Any]:
+    normalized_message = normalize_safety_text(message)
+
     # Check imminent risk first — most urgent, most specific
     for pattern in IMMINENT_RISK_PATTERNS:
-        if pattern.search(message):
+        if pattern.search(normalized_message):
             return {
                 "hasCrisisRisk": True,
                 "riskLevel": "imminent",
@@ -97,7 +110,7 @@ def assess_safety_risk(message: str) -> Dict[str, Any]:
 
     # Then check possible risk — broader distress signals
     for pattern in POSSIBLE_RISK_PATTERNS:
-        if pattern.search(message):
+        if pattern.search(normalized_message):
             return {
                 "hasCrisisRisk": True,
                 "riskLevel": "possible",

@@ -10,9 +10,12 @@ const possibleRiskPatterns = [
   /\bsuicid(e|al)\b/i,
   /\bself[-\s]?harm\b/i,
   /\bhurt myself\b/i,
-  /\bkill myself\b/i,
+  /\bkill(?:ing)? myself\b/i,
+  /\bi want to die\b/i,
   /\bend my life\b/i,
   /\bi do not want to live\b/i,
+  /\bi don'?t want to (?:live|be alive)\b/i,
+  /\bi wish i (?:was|were) dead\b/i,
   /\bcan't go on\b/i,
   /\bno reason to live\b/i,
   /\bhopeless\b/i,
@@ -21,19 +24,22 @@ const possibleRiskPatterns = [
 ];
 
 const imminentRiskPatterns = [
-  /\bi am going to kill myself\b/i,
-  /\bi'm going to kill myself\b/i,
+  /\bi(?: am|'m) going to kill myself\b/i,
   /\bi will kill myself\b/i,
-  /\bi have a plan\b/i,
-  /\btonight is the night\b/i,
+  /\bi have a plan\b(?=[^.!?\n]{0,100}\b(?:to (?:kill myself|end my life|hurt myself)|for (?:suicide|self[-\s]?harm))\b)/i,
+  /\btonight is the night\b(?=[^.!?\n]{0,100}\b(?:to (?:kill myself|end my life|hurt myself)|i (?:will|am going to|'m going to) (?:kill myself|end my life|hurt myself)|suicide|self[-\s]?harm)\b)/i,
   /\bgoodbye forever\b/i,
 ];
+
+const normalizeSafetyText = (message: string): string =>
+  message.replace(/[\u2018\u2019\u02bc\uff07]/g, "'");
 
 export const assessSafetyRisk = (
   message: string
 ): SafetyAssessment => {
+  const normalizedMessage = normalizeSafetyText(message);
   const hasImminentRisk = imminentRiskPatterns.some((pattern) =>
-    pattern.test(message)
+    pattern.test(normalizedMessage)
   );
 
   if (hasImminentRisk) {
@@ -46,7 +52,7 @@ export const assessSafetyRisk = (
   }
 
   const hasPossibleRisk = possibleRiskPatterns.some((pattern) =>
-    pattern.test(message)
+    pattern.test(normalizedMessage)
   );
 
   if (hasPossibleRisk) {
