@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteMoodForUser = exports.updateMoodForUser = exports.getMoodsForUser = exports.createMoodForUser = void 0;
 const database_1 = require("../config/database");
 const AppError_1 = require("../utils/AppError");
+const moodCatalog_1 = require("../utils/moodCatalog");
 const normalizeMood = (mood) => {
     // "unknown" means the value came from the outside world.
     // We validate it before trusting it.
@@ -12,7 +13,11 @@ const normalizeMood = (mood) => {
     if (mood.trim().length > 50) {
         throw new AppError_1.AppError("Mood must be 50 characters or fewer.", 400);
     }
-    return mood.trim();
+    const normalizedMood = (0, moodCatalog_1.normalizeMoodLabel)(mood);
+    if (!normalizedMood) {
+        throw new AppError_1.AppError(`Mood must be one of: ${moodCatalog_1.allowedMoodLabels.join(", ")}.`, 400);
+    }
+    return normalizedMood;
 };
 const createMoodForUser = async (userId, mood) => {
     if (!userId) {

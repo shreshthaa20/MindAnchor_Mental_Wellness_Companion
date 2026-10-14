@@ -1,5 +1,6 @@
 import { pool } from "../config/database";
 import { AppError } from "../utils/AppError";
+import { allowedMoodLabels, normalizeMoodLabel } from "../utils/moodCatalog";
 
 export interface Mood {
   id: number;
@@ -20,7 +21,16 @@ const normalizeMood = (mood: unknown): string => {
     throw new AppError("Mood must be 50 characters or fewer.", 400);
   }
 
-  return mood.trim();
+  const normalizedMood = normalizeMoodLabel(mood);
+
+  if (!normalizedMood) {
+    throw new AppError(
+      `Mood must be one of: ${allowedMoodLabels.join(", ")}.`,
+      400
+    );
+  }
+
+  return normalizedMood;
 };
 
 export const createMoodForUser = async (

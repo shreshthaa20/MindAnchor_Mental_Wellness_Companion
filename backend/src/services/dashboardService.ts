@@ -1,5 +1,6 @@
 import { pool } from "../config/database";
 import { AppError } from "../utils/AppError";
+import { moodScores, normalizeMoodLabel } from "../utils/moodCatalog";
 
 interface CountRow {
   count: string;
@@ -53,14 +54,6 @@ export interface DashboardAnalytics {
     trendDirection: "improving" | "declining" | "steady" | "not_enough_data";
   };
 }
-
-const moodScores: Record<string, number> = {
-  Happy: 5,
-  Calm: 4,
-  Anxious: 2,
-  Sad: 1,
-  Stressed: 2,
-};
 
 export const getDashboardAnalyticsForUser = async (
   userId: number | undefined
@@ -169,7 +162,8 @@ export const getDashboardAnalyticsForUser = async (
 
   const trendScoresByDay = new Map<string, number[]>();
   trendsResult.rows.forEach((row) => {
-    const score = moodScores[row.mood] ?? 3;
+    const normalizedMood = normalizeMoodLabel(row.mood);
+    const score = normalizedMood ? moodScores[normalizedMood] : 3;
     const values = trendScoresByDay.get(row.day) ?? [];
     values.push(score);
     trendScoresByDay.set(row.day, values);

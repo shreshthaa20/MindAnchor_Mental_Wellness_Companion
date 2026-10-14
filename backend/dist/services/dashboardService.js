@@ -3,13 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDashboardAnalyticsForUser = void 0;
 const database_1 = require("../config/database");
 const AppError_1 = require("../utils/AppError");
-const moodScores = {
-    Happy: 5,
-    Calm: 4,
-    Anxious: 2,
-    Sad: 1,
-    Stressed: 2,
-};
+const moodCatalog_1 = require("../utils/moodCatalog");
 const getDashboardAnalyticsForUser = async (userId) => {
     if (!userId) {
         throw new AppError_1.AppError("Unauthorized.", 401);
@@ -75,7 +69,8 @@ const getDashboardAnalyticsForUser = async (userId) => {
     startDate.setDate(today.getDate() - 6);
     const trendScoresByDay = new Map();
     trendsResult.rows.forEach((row) => {
-        const score = moodScores[row.mood] ?? 3;
+        const normalizedMood = (0, moodCatalog_1.normalizeMoodLabel)(row.mood);
+        const score = normalizedMood ? moodCatalog_1.moodScores[normalizedMood] : 3;
         const values = trendScoresByDay.get(row.day) ?? [];
         values.push(score);
         trendScoresByDay.set(row.day, values);
