@@ -1,5 +1,7 @@
 import { pool } from "../config/database";
 import { AppError } from "../utils/AppError";
+import { getRAGServiceUrl } from "../utils/ragServiceUrl";
+import { getRAGServiceAuthHeaders } from "../utils/ragServiceAuth";
 
 import { assessSafetyRisk, logSafetyEvent } from "./safetyService";
 
@@ -34,13 +36,7 @@ const normalizeMessage = (message: unknown): string => {
 };
 
 const getRagChatUrl = (): string => {
-  let baseUrl = process.env.RAG_SERVICE_URL || "http://localhost:8000";
-  baseUrl = baseUrl.trim().replace(/\/+$/, "");
-  if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
-    baseUrl = baseUrl.includes(".onrender.com") ? `https://${baseUrl}` : `http://${baseUrl}`;
-  }
-
-  return `${baseUrl}/chat`;
+  return `${getRAGServiceUrl()}/chat`;
 };
 
 const createUserMessageAndHistory = async (
@@ -199,7 +195,7 @@ export const createChatResponseForUser = async (
     // The Node backend calls the Python RAG service without holding a DB connection.
     const response = await fetch(getRagChatUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...getRAGServiceAuthHeaders() },
       body: JSON.stringify({
         user_id: userId,
         chat_type: normalizedChatType,

@@ -3,42 +3,73 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createWellnessGuideRecommendationForUser = exports.answerWithRetrievalForUser = exports.semanticSearchForUser = exports.getKnowledgeDocumentsForUser = exports.createKnowledgeDocumentForUser = void 0;
 const database_1 = require("../config/database");
 const AppError_1 = require("../utils/AppError");
+const ragServiceUrl_1 = require("../utils/ragServiceUrl");
+const ragServiceAuth_1 = require("../utils/ragServiceAuth");
 const safetyService_1 = require("./safetyService");
-const getRAGServiceUrl = () => {
-    // The Python AI service URL must be configured because this file acts as a bridge to it.
-    let url = process.env.RAG_SERVICE_URL;
-    if (!url) {
-        throw new AppError_1.AppError("RAG service URL is not configured.", 500);
+const normalizeRequiredString = (value, field, maxLength) => {
+    if (typeof value !== "string" || value.trim().length === 0) {
+        throw new AppError_1.AppError(`${field} is required.`, 400);
     }
-    url = url.trim().replace(/\/+$/, "");
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        // If it's a Render internal service name or public domain without protocol
-        if (url.includes(".onrender.com")) {
-            url = `https://${url}`;
-        }
-        else {
-            url = `http://${url}`;
-        }
+    const normalized = value.trim();
+    if (normalized.length > maxLength) {
+        throw new AppError_1.AppError(`${field} must be ${maxLength} characters or fewer.`, 400);
     }
-    return url;
+    return normalized;
 };
-const createKnowledgeDocumentForUser = async (userId, title, content, source, category = "User Wellness Notes", tags = []) => {
-    if (!userId) {
+const normalizeOptionalString = (value, field, maxLength) => {
+    if (value === undefined || value === null)
+        return undefined;
+    if (typeof value !== "string") {
+        throw new AppError_1.AppError(`${field} must be a string.`, 400);
+    }
+    const normalized = value.trim();
+    if (normalized.length > maxLength) {
+        throw new AppError_1.AppError(`${field} must be ${maxLength} characters or fewer.`, 400);
+    }
+    return normalized || undefined;
+};
+const normalizeTags = (tags) => {
+    if (!Array.isArray(tags)) {
+        throw new AppError_1.AppError("Tags must be an array of strings.", 400);
+    }
+    return tags.map((tag, index) => {
+        if (typeof tag !== "string" || tag.trim().length === 0) {
+            throw new AppError_1.AppError(`Tag ${index + 1} must be a non-empty string.`, 400);
+        }
+        return tag.trim();
+    });
+};
+const normalizeCategory = (category) => {
+    if (category === undefined || category === null)
+        return "User Wellness Notes";
+    return normalizeRequiredString(category, "Category", 80);
+};
+const requireUserId = (userId) => {
+    if (!Number.isInteger(userId) || userId <= 0) {
         throw new AppError_1.AppError("Unauthorized.", 401);
     }
+    return userId;
+};
+const createKnowledgeDocumentForUser = async (userId, title, content, source, category = "User Wellness Notes", tags = []) => {
+    const validatedUserId = requireUserId(userId);
+    const normalizedTitle = normalizeRequiredString(title, "Title", 160);
+    const normalizedContent = normalizeRequiredString(content, "Content", 20000);
+    const normalizedSource = normalizeOptionalString(source, "Source", 500);
+    const normalizedCategory = normalizeCategory(category);
+    const normalizedTags = normalizeTags(tags);
     // Forward the request to the Python service, which creates embeddings and saves the document.
-    const url = `${getRAGServiceUrl()}/knowledge`;
+    const url = `${(0, ragServiceUrl_1.getRAGServiceUrl)({ requireConfigured: true })}/knowledge`;
     try {
         const response = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...(0, ragServiceAuth_1.getRAGServiceAuthHeaders)() },
             body: JSON.stringify({
-                user_id: userId,
-                title,
-                content,
-                source,
-                category,
-                tags,
+                user_id: validatedUserId,
+                title: normalizedTitle,
+                content: normalizedContent,
+                source: normalizedSource,
+                category: normalizedCategory,
+                tags: normalizedTags,
             }),
         });
         if (!response.ok) {
@@ -56,12 +87,10 @@ const createKnowledgeDocumentForUser = async (userId, title, content, source, ca
 };
 exports.createKnowledgeDocumentForUser = createKnowledgeDocumentForUser;
 const getKnowledgeDocumentsForUser = async (userId) => {
-    if (!userId) {
-        throw new AppError_1.AppError("Unauthorized.", 401);
-    }
-    const url = `${getRAGServiceUrl()}/knowledge?user_id=${userId}`;
+    const validatedUserId = requireUserId(userId);
+    const url = `${(0, ragServiceUrl_1.getRAGServiceUrl)({ requireConfigured: true })}/knowledge?user_id=${validatedUserId}`;
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: (0, ragServiceAuth_1.getRAGServiceAuthHeaders)() });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new AppError_1.AppError(errData.detail || "Failed to fetch knowledge documents from RAG service.", response.status);
@@ -77,13 +106,19 @@ const getKnowledgeDocumentsForUser = async (userId) => {
 };
 exports.getKnowledgeDocumentsForUser = getKnowledgeDocumentsForUser;
 const semanticSearchForUser = async (userId, query, limit) => {
-    if (!userId) {
-        throw new AppError_1.AppError("Unauthorized.", 401);
+    const validatedUserId = requireUserId(userId);
+    const normalizedQuery = normalizeRequiredString(query, "Query", 1000);
+    const requestedLimit = limit ?? 5;
+    const normalizedLimit = typeof requestedLimit === "string" && /^\d+$/.test(requestedLimit)
+        ? Number(requestedLimit)
+        : requestedLimit;
+    if (typeof normalizedLimit !== "number" || !Number.isInteger(normalizedLimit) || normalizedLimit < 1 || normalizedLimit > 10) {
+        throw new AppError_1.AppError("Limit must be an integer between 1 and 10.", 400);
     }
     // Semantic search means "find text with similar meaning", not just matching words.
-    const url = `${getRAGServiceUrl()}/search?user_id=${userId}&query=${encodeURIComponent(String(query || ""))}&limit=${limit || 5}`;
+    const url = `${(0, ragServiceUrl_1.getRAGServiceUrl)({ requireConfigured: true })}/search?user_id=${validatedUserId}&query=${encodeURIComponent(normalizedQuery)}&limit=${normalizedLimit}`;
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: (0, ragServiceAuth_1.getRAGServiceAuthHeaders)() });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new AppError_1.AppError(errData.detail || "Failed to run semantic search in RAG service.", response.status);
@@ -99,18 +134,17 @@ const semanticSearchForUser = async (userId, query, limit) => {
 };
 exports.semanticSearchForUser = semanticSearchForUser;
 const answerWithRetrievalForUser = async (userId, question) => {
-    if (!userId) {
-        throw new AppError_1.AppError("Unauthorized.", 401);
-    }
+    const validatedUserId = requireUserId(userId);
+    const normalizedQuestion = normalizeRequiredString(question, "Question", 4000);
     // /answer asks the Python service to search relevant knowledge and generate an answer.
-    const url = `${getRAGServiceUrl()}/answer`;
+    const url = `${(0, ragServiceUrl_1.getRAGServiceUrl)({ requireConfigured: true })}/answer`;
     try {
         const response = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...(0, ragServiceAuth_1.getRAGServiceAuthHeaders)() },
             body: JSON.stringify({
-                user_id: userId,
-                question,
+                user_id: validatedUserId,
+                question: normalizedQuestion,
             }),
         });
         if (!response.ok) {
@@ -121,7 +155,7 @@ const answerWithRetrievalForUser = async (userId, question) => {
         // Check if safety risk was identified
         if (data.safety?.hasCrisisRisk) {
             await (0, safetyService_1.logSafetyEvent)({
-                userId,
+                userId: validatedUserId,
                 eventType: "rag_crisis_signal",
                 riskLevel: data.safety.riskLevel,
                 source: "rag",
@@ -142,19 +176,18 @@ const answerWithRetrievalForUser = async (userId, question) => {
 };
 exports.answerWithRetrievalForUser = answerWithRetrievalForUser;
 const createWellnessGuideRecommendationForUser = async (userId, question) => {
-    if (!userId) {
-        throw new AppError_1.AppError("Unauthorized.", 401);
-    }
-    const targetBase = getRAGServiceUrl();
+    const validatedUserId = requireUserId(userId);
+    const normalizedQuestion = normalizeRequiredString(question, "Question", 4000);
+    const targetBase = (0, ragServiceUrl_1.getRAGServiceUrl)({ requireConfigured: true });
     const url = `${targetBase}/wellness-guide`;
     let resultData;
     try {
         const response = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...(0, ragServiceAuth_1.getRAGServiceAuthHeaders)() },
             body: JSON.stringify({
-                user_id: userId,
-                question,
+                user_id: validatedUserId,
+                question: normalizedQuestion,
             }),
         });
         if (!response.ok) {
@@ -176,11 +209,11 @@ const createWellnessGuideRecommendationForUser = async (userId, question) => {
       INSERT INTO chat_messages (user_id, role, chat_type, content)
       VALUES ($1, 'user', 'wellness_guide', $2)
       RETURNING *
-      `, [userId, String(question)]);
+      `, [validatedUserId, normalizedQuestion]);
         // If safety crisis signal was triggered, log it and return safety response
         if (resultData.safety?.hasCrisisRisk) {
             await (0, safetyService_1.logSafetyEvent)({
-                userId,
+                userId: validatedUserId,
                 eventType: "wellness_guide_crisis_signal",
                 riskLevel: resultData.safety.riskLevel,
                 source: "wellness_guide",
@@ -191,7 +224,7 @@ const createWellnessGuideRecommendationForUser = async (userId, question) => {
       INSERT INTO chat_messages (user_id, role, chat_type, content, recommendations)
       VALUES ($1, 'assistant', 'wellness_guide', $2, $3::jsonb)
       RETURNING *
-      `, [userId, resultData.answer, JSON.stringify(resultData.recommendations || [])]);
+      `, [validatedUserId, resultData.answer, JSON.stringify(resultData.recommendations || [])]);
         await client.query("COMMIT");
         return {
             userMessage: userMessageResult.rows[0],

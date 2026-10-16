@@ -149,6 +149,9 @@ JWT_SECRET=replace_with_a_unique_64_byte_random_secret
 
 # Google Gemini (for RAG service)
 GEMINI_API_KEY=your_actual_gemini_api_key_here
+
+# Shared Node-to-RAG service credential
+RAG_SERVICE_API_KEY=replace_with_a_unique_random_secret
 ```
 
 > **Production**: Use [Neon](https://neon.tech) as a managed serverless Postgres provider. Set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_SSLMODE=require` accordingly.
@@ -167,7 +170,7 @@ This starts:
 | Service | URL |
 |---|---|
 | Node.js Backend | `http://localhost:5000` |
-| Python RAG Service | `http://localhost:8000` |
+| Python RAG Service | `http://127.0.0.1:8000` |
 | PostgreSQL + pgvector | `localhost:5432` |
 
 ---
@@ -195,6 +198,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
+For manual runs, set the same `RAG_SERVICE_API_KEY` in `backend/.env` and `rag_backend/.env`. The RAG service's functional routes require the `X-Internal-API-Key` header; `/health` remains public for liveness checks. In Docker Compose, port 8000 is bound to loopback only.
+
 #### Flutter App
 
 ```bash
@@ -220,7 +225,9 @@ flutter run
 | `POST` | `/api/chat` | Chat message proxy |
 | `*` | `/api/rag/*` | RAG service proxy |
 
-### Python RAG Service (`http://localhost:8000`)
+### Python RAG Service (`http://127.0.0.1:8000`)
+
+All routes except `/health` require the `X-Internal-API-Key` header configured by `RAG_SERVICE_API_KEY`.
 
 | Method | Endpoint | Description |
 |---|---|---|

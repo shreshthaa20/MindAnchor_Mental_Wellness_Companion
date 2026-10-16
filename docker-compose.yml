@@ -29,7 +29,7 @@ services:
     container_name: mindanchor-rag-backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -37,6 +37,7 @@ services:
       DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD must be set}"
       DB_NAME: ${DB_NAME:-mindanchor}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      RAG_SERVICE_API_KEY: ${RAG_SERVICE_API_KEY:?RAG_SERVICE_API_KEY must be set}
       EMBEDDING_DIMENSIONS: 768
     volumes:
       - ./rag_backend:/app
@@ -62,6 +63,7 @@ services:
       DB_NAME: ${DB_NAME:-mindanchor}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       RAG_SERVICE_URL: http://rag_backend:8000
+      RAG_SERVICE_API_KEY: ${RAG_SERVICE_API_KEY:?RAG_SERVICE_API_KEY must be set}
     depends_on:
       postgres:
         condition: service_healthy

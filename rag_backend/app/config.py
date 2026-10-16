@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = ""
     DB_NAME: str = "neondb"
     GEMINI_API_KEY: str = ""
+    RAG_SERVICE_API_KEY: str = ""
     EMBEDDING_DIMENSIONS: int = 768
     DB_SSLMODE: Optional[str] = None
     

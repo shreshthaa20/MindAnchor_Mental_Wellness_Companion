@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createChatResponseForUser = exports.getChatHistoryForUser = void 0;
 const database_1 = require("../config/database");
 const AppError_1 = require("../utils/AppError");
+const ragServiceUrl_1 = require("../utils/ragServiceUrl");
+const ragServiceAuth_1 = require("../utils/ragServiceAuth");
 const safetyService_1 = require("./safetyService");
 const normalizeChatType = (chatType) => {
     // The app currently supports only one chat mode.
@@ -20,12 +22,7 @@ const normalizeMessage = (message) => {
     return message.trim();
 };
 const getRagChatUrl = () => {
-    let baseUrl = process.env.RAG_SERVICE_URL || "http://localhost:8000";
-    baseUrl = baseUrl.trim().replace(/\/+$/, "");
-    if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
-        baseUrl = baseUrl.includes(".onrender.com") ? `https://${baseUrl}` : `http://${baseUrl}`;
-    }
-    return `${baseUrl}/chat`;
+    return `${(0, ragServiceUrl_1.getRAGServiceUrl)()}/chat`;
 };
 const createUserMessageAndHistory = async (userId, normalizedChatType, normalizedMessage) => {
     const client = await database_1.pool.connect();
@@ -124,7 +121,7 @@ const createChatResponseForUser = async (userId, message, chatType) => {
         // The Node backend calls the Python RAG service without holding a DB connection.
         const response = await fetch(getRagChatUrl(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...(0, ragServiceAuth_1.getRAGServiceAuthHeaders)() },
             body: JSON.stringify({
                 user_id: userId,
                 chat_type: normalizedChatType,

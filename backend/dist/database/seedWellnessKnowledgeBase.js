@@ -1,15 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const database_1 = require("../config/database");
+const ragServiceUrl_1 = require("../utils/ragServiceUrl");
+const ragServiceAuth_1 = require("../utils/ragServiceAuth");
 // Calls the Python RAG service's /embed endpoint, which uses Gemini
 // (google.generativeai) under the hood — the SAME embedding model
 // used by live semantic search, so seeded documents and search
 // queries end up in the same vector space and can be compared.
 const getEmbedding = async (text) => {
-    const url = `${process.env.RAG_SERVICE_URL || "http://localhost:8000"}/embed`;
+    const url = `${(0, ragServiceUrl_1.getRAGServiceUrl)()}/embed`;
     const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(0, ragServiceAuth_1.getRAGServiceAuthHeaders)() },
         body: JSON.stringify({ text }),
     });
     if (!response.ok) {
