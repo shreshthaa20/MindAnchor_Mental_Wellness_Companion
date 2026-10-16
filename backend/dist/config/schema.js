@@ -3,6 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.knowledgeBase = exports.safetyEvents = exports.chatMessages = exports.journals = exports.moods = exports.users = void 0;
 const pg_core_1 = require("drizzle-orm/pg-core");
 const drizzle_orm_1 = require("drizzle-orm");
+const vector768 = (0, pg_core_1.customType)({
+    dataType: () => "vector(768)",
+});
 exports.users = (0, pg_core_1.pgTable)("users", {
     id: (0, pg_core_1.serial)("id").primaryKey(),
     name: (0, pg_core_1.varchar)("name", { length: 100 }).notNull(),
@@ -53,7 +56,7 @@ exports.knowledgeBase = (0, pg_core_1.pgTable)("knowledge_base", {
     source: (0, pg_core_1.text)("source"),
     tags: (0, pg_core_1.text)("tags").array().default((0, drizzle_orm_1.sql) `'{}'`).notNull(),
     isCurated: (0, pg_core_1.boolean)("is_curated").default(false).notNull(),
-    embedding: (0, pg_core_1.text)("embedding").notNull(),
+    embedding: vector768("embedding").notNull(),
     createdAt: (0, pg_core_1.timestamp)("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: (0, pg_core_1.timestamp)("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

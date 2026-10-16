@@ -174,53 +174,57 @@ def create_embedding(text: str) -> List[float]:
     return response['embedding']
 
 
-def get_personalization_context(user_id: int) -> str:
-    # Collect recent user data so the AI response can feel personalized.
+def get_personalization_data(user_id: int) -> Tuple[str, str]:
+    # Load all personalization fields in one query and connection.
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Get latest mood for immediate emotional state
             cur.execute(
                 """
-                SELECT mood
-                FROM moods
-                WHERE user_id = %s
-                ORDER BY created_at DESC
-                LIMIT 1
+                WITH latest_mood AS (
+                    SELECT mood
+                    FROM moods
+                    WHERE user_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                ),
+                mood_counts AS (
+                    SELECT mood, COUNT(*) AS count
+                    FROM moods
+                    WHERE user_id = %s
+                      AND created_at >= NOW() - INTERVAL '14 days'
+                    GROUP BY mood
+                    ORDER BY count DESC, mood ASC
+                    LIMIT 8
+                ),
+                recent_journals AS (
+                    SELECT title, content, created_at
+                    FROM journals
+                    WHERE user_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT 5
+                )
+                SELECT
+                    COALESCE((SELECT mood FROM latest_mood), '') AS latest_mood,
+                    COALESCE(
+                        (SELECT string_agg(
+                            mood || ': ' || count::text,
+                            ', ' ORDER BY count DESC, mood ASC
+                        ) FROM mood_counts),
+                        ''
+                    ) AS moods,
+                    COALESCE(
+                        (SELECT string_agg(
+                            title || ': ' || content,
+                            E'\\n' ORDER BY created_at DESC
+                        ) FROM recent_journals),
+                        ''
+                    ) AS journals
                 """,
-                (user_id,)
+                (user_id, user_id, user_id)
             )
-            latest_mood_row = cur.fetchone()
-            latest_mood = latest_mood_row[0] if latest_mood_row else ""
+            latest_mood, moods, journals = cur.fetchone()
 
-            # Get moods (last 14 days) for mood pattern
-            cur.execute(
-                """
-                SELECT mood, COUNT(*) AS count
-                FROM moods
-                WHERE user_id = %s
-                  AND created_at >= NOW() - INTERVAL '14 days'
-                GROUP BY mood
-                ORDER BY count DESC, mood ASC
-                LIMIT 8
-                """,
-                (user_id,)
-            )
-            moods = ", ".join(f"{r[0]}: {r[1]}" for r in cur.fetchall())
-
-            # Get journals (last 5)
-            cur.execute(
-                """
-                SELECT title, content
-                FROM journals
-                WHERE user_id = %s
-                ORDER BY created_at DESC
-                LIMIT 5
-                """,
-                (user_id,)
-            )
-            journals = "\n".join(f"{r[0]}: {r[1]}" for r in cur.fetchall())
-
-    return f"""
+    context = f"""
 Latest mood:
 {latest_mood if latest_mood else "No mood logged yet."}
 
@@ -230,26 +234,7 @@ Recent mood history:
 Recent journal/general entries:
 {journals if journals else "No recent journal entries."}
 """.strip()
-
-
-def get_latest_mood_label(user_id: int) -> str:
-    try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT mood
-                    FROM moods
-                    WHERE user_id = %s
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                    """,
-                    (user_id,)
-                )
-                row = cur.fetchone()
-                return row[0] if row else ""
-    except Exception:
-        return ""
+    return latest_mood, context
 
 
 def semantic_search(user_id: int, query: str, limit: int = 5) -> List[Dict[str, Any]]:
@@ -271,10 +256,10 @@ def semantic_search(user_id: int, query: str, limit: int = 5) -> List[Dict[str, 
                        is_curated,
                        created_at,
                        updated_at,
-                       1 - (embedding::vector <=> %s::vector) as similarity
+                       1 - (embedding <=> %s::vector) as similarity
                 FROM knowledge_base
                 WHERE user_id = %s OR user_id IS NULL
-                ORDER BY embedding::vector <=> %s::vector
+                ORDER BY embedding <=> %s::vector
                 LIMIT %s
                 """,
                 (query_embedding_str, user_id, query_embedding_str, limit)
@@ -319,7 +304,7 @@ def insert_knowledge_document(
                 """
                 INSERT INTO knowledge_base
                   (user_id, category, title, content, source, tags, is_curated, embedding)
-                VALUES (%s, %s, %s, %s, %s, %s, false, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, false, %s::vector)
                 RETURNING id, user_id, category, title, content, source, tags,
                           is_curated, created_at, updated_at
                 """,
@@ -415,8 +400,7 @@ def generate_response(
             "safety": safety
         }
 
-    latest_mood = get_latest_mood_label(user_id)
-    personalization = get_personalization_context(user_id)
+    latest_mood, personalization = get_personalization_data(user_id)
 
     if depth == "deep":
         retrieval_query = f"{question}\n\n{personalization}"
@@ -479,8 +463,15 @@ def generate_wellness_guide(user_id: int, question: str) -> Dict[str, Any]:
 def chat_completion(user_id: int, messages: List[Dict[str, str]]) -> str:
     # Chat completion is used by Node's /api/chat endpoint.
     # It includes recent mood/journal context before asking Gemini to reply.
-    latest_mood = get_latest_mood_label(user_id)
-    personalization = get_personalization_context(user_id)
+    latest_user_message = next(
+        (message["content"] for message in reversed(messages) if message.get("role") == "user"),
+        "",
+    )
+    safety = assess_safety_risk(latest_user_message)
+    if safety["hasCrisisRisk"]:
+        return safety["response"]
+
+    latest_mood, personalization = get_personalization_data(user_id)
     system_instruction = f"""
 {RAG_INSTRUCTIONS}
 

@@ -15,6 +15,7 @@ services:
       - ./backend/src/database/001_core_features.sql:/docker-entrypoint-initdb.d/01_core.sql:ro
       - ./backend/src/database/002_rag_pgvector.sql:/docker-entrypoint-initdb.d/02_rag.sql:ro
       - ./backend/src/database/006_safety_events.sql:/docker-entrypoint-initdb.d/03_safety.sql:ro
+      - ./backend/src/database/008_knowledge_embedding_vector.sql:/docker-entrypoint-initdb.d/04_embedding_vector.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-mindanchor}"]
       interval: 5s

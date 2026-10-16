@@ -1,5 +1,9 @@
-import { pgTable, serial, varchar, text, timestamp, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, timestamp, integer, jsonb, boolean, customType } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+const vector768 = customType<{ data: string }>({
+  dataType: () => "vector(768)",
+});
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -56,7 +60,7 @@ export const knowledgeBase = pgTable("knowledge_base", {
   source: text("source"),
   tags: text("tags").array().default(sql`'{}'`).notNull(),
   isCurated: boolean("is_curated").default(false).notNull(),
-  embedding: text("embedding").notNull(),
+  embedding: vector768("embedding").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

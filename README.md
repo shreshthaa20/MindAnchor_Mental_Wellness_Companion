@@ -182,7 +182,8 @@ This starts:
 ```bash
 cd backend
 npm install
-npx drizzle-kit push    # run DB migrations
+npx drizzle-kit push    # synchronize the Drizzle schema
+# For an existing database, apply backend/src/database/008_knowledge_embedding_vector.sql once
 npm run dev             # development (nodemon)
 # npm start             # production
 ```
